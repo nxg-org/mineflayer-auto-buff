@@ -4,7 +4,9 @@
     "description": "Automatically applies effects to mineflayer bots using potions.",
     "keywords": [
         "mineflayer",
-        "mineflayer-util"
+        "mineflayer-util",
+        "mineflayer-plugin",
+        "mineflayer-auto-buff"
     ],
     "repository": {
         "type": "git",
