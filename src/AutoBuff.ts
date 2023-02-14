@@ -284,7 +284,6 @@ export class AutoBuff {
     this.isDrinking = true;
     for (const effect of effects) {
       const items = this.findEffectItems(effect);
-      console.log("effect:", effect, "items:", items);
       if (items && items.length !== 0) {
         this._packetDrinking = true;
         await this.bot.util.inv.customEquip(items[0], hand);
