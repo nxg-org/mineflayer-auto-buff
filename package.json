@@ -18,6 +18,7 @@
     "types": "lib/index.d.ts",
     "scripts": {
         "build": "npx tsc",
+        "example": "ts-node -T example/basic.ts",
         "prepublish": "npm run build"
     },
     "dependencies": {
