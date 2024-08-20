@@ -13,6 +13,7 @@ export interface AutoBuffOptions {
     timeout: number;
     useOffHand: boolean;
     dropBottle: boolean;
+    alwaysDrink: boolean;
     returnToLastItem: boolean;
     effectsToListenFor: string[];
 }

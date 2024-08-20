@@ -26,6 +26,7 @@ export class AutoBuff {
   public timeout: number = 3000;
   private useOffHand: boolean = true;
   private dropBottle: boolean = true;
+  private alwaysDrink: boolean = false;
   public isDrinking: boolean = false;
   private _packetDrinking: boolean = false;
   private returnToLastItem: boolean;
@@ -37,7 +38,8 @@ export class AutoBuff {
     this.timeout = options.timeout ?? 3000;
     this.useOffHand = options.useOffHand ?? false;
     this.returnToLastItem = options.returnToLastItem ?? false;
-    this.dropBottle = options.dropBottle ?? false;
+    this.dropBottle = options.dropBottle ?? true;
+    this.alwaysDrink = options.alwaysDrink ?? false;
     this.effectsToListenFor = options.effectsToListenFor ?? [];
 
     this.effects = md(bot.version).effects;
@@ -203,17 +205,19 @@ export class AutoBuff {
 
   /**
    *
+   * @deprecated No point in using this, just use applyEffectsToSelf.
+   * 
    * @param effects
-   * @returns {number} code. 0 = good, 1 = error, 2 = currently applying an effect, 3 = already has effect.
+   * @returns {Results}
    */
-  async applyEffectToSelf(effect: string): Promise<number> {
+  async applyEffectToSelf(effect: string): Promise<Results> {
     if (this._packetDrinking) {
       return Results.BUSY;
     }
     if (this.canceled) {
       return Results.CANCELLED;
     }
-    if (this.getCurrentBuffsAsStrings()?.includes(effect)) {
+    if (!this.alwaysDrink && this.getCurrentBuffsAsStrings()?.includes(effect)) {
       return Results.ALREADY_BUFFED;
     }
 
@@ -242,12 +246,12 @@ export class AutoBuff {
       return Results.FAIL;
     }
 
-    // if (this.dropBottle) {
-    //     const item = this.getHandWithItem()
-    //     if (item?.name.includes("bottle")) {
-    //         await this.bot.tossStack(item)
-    //     }
-    // }
+    if (this.dropBottle) {
+        const item = this.getHandWithItem()
+        if (item?.name.includes("bottle")) {
+            await this.bot.tossStack(item)
+        }
+    }
 
     if (this.returnToLastItem) {
       const copyItem = this.bot.inventory.items().find((item) => item?.name === this.lastItem?.name);
@@ -287,7 +291,7 @@ export class AutoBuff {
     for (const effect of effects) {
 
       // check if we already have effect
-      if (this.getCurrentBuffsAsStrings()?.includes(effect)) {
+      if (!this.alwaysDrink && this.getCurrentBuffsAsStrings()?.includes(effect)) {
         completed++;
         continue;
       }
@@ -305,6 +309,14 @@ export class AutoBuff {
           this.bot.deactivateItem();
           this.bot.activateItem(this.useOffHand);
           await this.waitUntilFinishedDrinking();
+
+          if (this.dropBottle) {
+            const item = this.getHandWithItem()
+            if (item?.name.includes("bottle")) {
+                await this.bot.tossStack(item)
+            }
+        }
+
         }
         completed++;
       }

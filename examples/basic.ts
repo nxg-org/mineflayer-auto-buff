@@ -27,6 +27,12 @@ bot.on("chat", async (user, message) => {
 
         case "buffme":
             const target = bot.nearestEntity(e => e.type === "player" && e.username === user);
+            if (!target) {
+                bot.chat("No player found");
+                return;
+            }
+
+            const res2 = await bot.autoBuff.applyEffectsToEntity(target, ...args)
     }
 })
 
