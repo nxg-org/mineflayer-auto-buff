@@ -18,7 +18,7 @@
     "types": "lib/index.d.ts",
     "scripts": {
         "build": "npx tsc",
-        "example": "ts-node -T example/basic.ts",
+        "example": "ts-node -T examples/basic.ts",
         "prepublish": "npm run build"
     },
     "dependencies": {
@@ -26,7 +26,7 @@
     },
     "devDependencies": {
         "@types/node": "^16.11.11",
-        "mineflayer": "^3.11.2",
+        "mineflayer": "^4.20.0",
         "typescript": "^4.5.2"
     }
 }

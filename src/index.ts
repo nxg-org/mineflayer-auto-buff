@@ -20,3 +20,5 @@ export default function plugin(bot: Bot) {
     bot.autoBuff = new AutoBuff(bot)
 
 }
+
+export { Results } from "./AutoBuffTypes"

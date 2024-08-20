@@ -7,7 +7,7 @@ import { timeStamp } from "console";
 import { promisify } from "util";
 
 import { AutoBuffOptions, SortedEffects, mdEffects, mixedEffect, mixedEffects, mfEffects } from "./AutoBuffOptions";
-import { effectConversions } from "./AutoBuffTypes";
+import { Results, effectConversions } from "./AutoBuffTypes";
 
 const sleep = promisify(setTimeout);
 
@@ -208,13 +208,13 @@ export class AutoBuff {
    */
   async applyEffectToSelf(effect: string): Promise<number> {
     if (this._packetDrinking) {
-      return 2;
+      return Results.BUSY;
     }
     if (this.canceled) {
-      return 3;
+      return Results.CANCELLED;
     }
     if (this.getCurrentBuffsAsStrings()?.includes(effect)) {
-      return 4;
+      return Results.ALREADY_BUFFED;
     }
 
     const orgItem = this.getHandWithItem();
@@ -239,7 +239,7 @@ export class AutoBuff {
         await this.waitUntilFinishedDrinking();
       }
     } else {
-      return 1;
+      return Results.FAIL;
     }
 
     // if (this.dropBottle) {
@@ -256,15 +256,15 @@ export class AutoBuff {
       }
     }
     this.isDrinking = false;
-    return 0;
+    return Results.SUCCESS;
   }
 
-  async applyEffectsToSelf(...effects: string[]): Promise<number> {
+  async applyEffectsToSelf(...effects: string[]): Promise<Results> {
     if (this._packetDrinking) {
-      return 2;
+      return Results.BUSY;
     }
     if (this.canceled) {
-      return 3;
+      return Results.CANCELLED;
     }
     const orgItem = this.getHandWithItem();
 
@@ -273,16 +273,25 @@ export class AutoBuff {
       if (foundEffects) {
         effects = Object.values(foundEffects).map((effect) => effect.name);
       } else {
-        return 4;
+        return Results.SUCCESS;
       }
     }
+
+    
 
     if (!["bottle", "potion"].some((name) => orgItem?.name.includes(name))) this.lastItem = orgItem;
 
     const hand = this.getHand();
-    let ran = 0;
+    let completed = 0;
     this.isDrinking = true;
     for (const effect of effects) {
+
+      // check if we already have effect
+      if (this.getCurrentBuffsAsStrings()?.includes(effect)) {
+        completed++;
+        continue;
+      }
+
       const items = this.findEffectItems(effect);
       if (items && items.length !== 0) {
         this._packetDrinking = true;
@@ -297,7 +306,7 @@ export class AutoBuff {
           this.bot.activateItem(this.useOffHand);
           await this.waitUntilFinishedDrinking();
         }
-        ran++;
+        completed++;
       }
     }
 
@@ -308,12 +317,14 @@ export class AutoBuff {
       }
     }
     this.isDrinking = false;
-    if (ran === 0) return 1;
-    else return 0;
+    if (completed === 0) return Results.FAIL;
+    else if (completed < effects.length) return Results.PARTIAL;
+    else return Results.SUCCESS;
   }
 
-  applyEffectsToEntity(entity: Entity, effects?: string[]): boolean {
-    return false;
+  applyEffectsToEntity(entity: Entity, ...effects: string[]): Results {
+    // TODO: implement staticShot to calculate a trajectory to hit the other entity.
+    return Results.FAIL;
   }
 
   async cancelDrinking(): Promise<boolean> {
