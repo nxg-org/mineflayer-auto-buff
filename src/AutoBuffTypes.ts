@@ -14,7 +14,7 @@ export const effectConversions: effectConversions = {
 
 }
 
-export enum Results {
+export enum Result {
     SUCCESS = 0,
     PARTIAL = 1,
     FAIL = 2,

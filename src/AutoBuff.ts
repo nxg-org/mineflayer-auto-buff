@@ -7,7 +7,7 @@ import { timeStamp } from "console";
 import { promisify } from "util";
 
 import { AutoBuffOptions, SortedEffects, mdEffects, mixedEffect, mixedEffects, mfEffects } from "./AutoBuffOptions";
-import { Results, effectConversions } from "./AutoBuffTypes";
+import { Result, effectConversions } from "./AutoBuffTypes";
 
 const sleep = promisify(setTimeout);
 
@@ -208,17 +208,17 @@ export class AutoBuff {
    * @deprecated No point in using this, just use applyEffectsToSelf.
    * 
    * @param effects
-   * @returns {Results}
+   * @returns {Result}
    */
-  async applyEffectToSelf(effect: string): Promise<Results> {
+  async applyEffectToSelf(effect: string): Promise<Result> {
     if (this._packetDrinking) {
-      return Results.BUSY;
+      return Result.BUSY;
     }
     if (this.canceled) {
-      return Results.CANCELLED;
+      return Result.CANCELLED;
     }
     if (!this.alwaysDrink && this.getCurrentBuffsAsStrings()?.includes(effect)) {
-      return Results.ALREADY_BUFFED;
+      return Result.ALREADY_BUFFED;
     }
 
     const orgItem = this.getHandWithItem();
@@ -243,7 +243,7 @@ export class AutoBuff {
         await this.waitUntilFinishedDrinking();
       }
     } else {
-      return Results.FAIL;
+      return Result.FAIL;
     }
 
     if (this.dropBottle) {
@@ -260,15 +260,71 @@ export class AutoBuff {
       }
     }
     this.isDrinking = false;
-    return Results.SUCCESS;
+    return Result.SUCCESS;
   }
 
-  async applyEffectsToSelf(...effects: string[]): Promise<Results> {
+  /**
+   * Apply a potion/buff item directly to self.
+   * Provides fine-grained control over which item to apply without needing to sync with effect mappings.
+   * 
+   * @param item The item to apply (must be a potion)
+   * @returns {Result}
+   */
+  async applyItemToSelf(item: Item): Promise<Result> {
     if (this._packetDrinking) {
-      return Results.BUSY;
+      return Result.BUSY;
     }
     if (this.canceled) {
-      return Results.CANCELLED;
+      return Result.CANCELLED;
+    }
+
+    const orgItem = this.getHandWithItem();
+
+    if (!["bottle", "potion"].some((name) => orgItem?.name.includes(name))) this.lastItem = orgItem;
+
+    const hand = this.getHand();
+
+    if (item) {
+      this.isDrinking = true;
+      this._packetDrinking = true;
+      await this.bot.util.inv.customEquip(item, hand);
+      if (item.name.includes("splash")) {
+        await this.bot.lookAt(this.bot.entity.position, true);
+        await sleep(50);
+        this.bot.activateItem(this.useOffHand);
+        this._packetDrinking = false;
+      } else {
+        this.bot.deactivateItem();
+        this.bot.activateItem(this.useOffHand);
+        await this.waitUntilFinishedDrinking();
+
+        if (this.dropBottle) {
+          const currentItem = this.getHandWithItem();
+          if (currentItem?.name.includes("bottle")) {
+            await this.bot.tossStack(currentItem);
+          }
+        }
+      }
+    } else {
+      return Result.FAIL;
+    }
+
+    if (this.returnToLastItem) {
+      const copyItem = this.bot.inventory.items().find((invItem) => invItem?.name === this.lastItem?.name);
+      if (copyItem) {
+        await this.bot.equip(copyItem, hand);
+      }
+    }
+    this.isDrinking = false;
+    return Result.SUCCESS;
+  }
+
+  async applyEffectsToSelf(...effects: string[]): Promise<Result> {
+    if (this._packetDrinking) {
+      return Result.BUSY;
+    }
+    if (this.canceled) {
+      return Result.CANCELLED;
     }
     const orgItem = this.getHandWithItem();
 
@@ -277,7 +333,7 @@ export class AutoBuff {
       if (foundEffects) {
         effects = Object.values(foundEffects).map((effect) => effect.name);
       } else {
-        return Results.SUCCESS;
+        return Result.SUCCESS;
       }
     }
 
@@ -329,14 +385,14 @@ export class AutoBuff {
       }
     }
     this.isDrinking = false;
-    if (completed === 0) return Results.FAIL;
-    else if (completed < effects.length) return Results.PARTIAL;
-    else return Results.SUCCESS;
+    if (completed === 0) return Result.FAIL;
+    else if (completed < effects.length) return Result.PARTIAL;
+    else return Result.SUCCESS;
   }
 
-  applyEffectsToEntity(entity: Entity, ...effects: string[]): Results {
+  applyEffectsToEntity(entity: Entity, ...effects: string[]): Result {
     // TODO: implement staticShot to calculate a trajectory to hit the other entity.
-    return Results.FAIL;
+    return Result.FAIL;
   }
 
   async cancelDrinking(): Promise<boolean> {
