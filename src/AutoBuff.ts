@@ -7,7 +7,8 @@ import { timeStamp } from "console";
 import { promisify } from "util";
 
 import { AutoBuffOptions, SortedEffects, mdEffects, mixedEffect, mixedEffects, mfEffects } from "./AutoBuffOptions";
-import { Result, effectConversions } from "./AutoBuffTypes";
+import { Result } from "./AutoBuffTypes";
+import { getStandardizedPotionData, itemMatchesPotionEffect } from "./potionUtils";
 
 const sleep = promisify(setTimeout);
 
@@ -75,6 +76,11 @@ export class AutoBuff {
 
   getHandWithItem() {
     return this.bot.inventory.slots[this.bot.getEquipmentDestSlot(this.getHand())];
+  }
+
+  private isThrowablePotion(item: Item): boolean {
+    const potionData = getStandardizedPotionData(this.bot, item);
+    return potionData.isSplash || potionData.isLingering;
   }
 
   display(): void {
@@ -157,14 +163,14 @@ export class AutoBuff {
     } else {
       items = this.bot.inventory
         .items()
-        .filter((item) => !item.name.includes("splash") && item.name.toLowerCase().includes("potion"));
+        .filter((item) => item.name.toLowerCase().includes("potion") && !this.isThrowablePotion(item));
     }
 
     let binded: { [effectName: string]: Item[] } = {};
 
     for (const effect of effects) {
       binded[effect.name.toLowerCase()] = items.filter((item) =>
-        (item.nbt?.value as any).Potion.value.includes(effectConversions[effect.name.toLowerCase()])
+        itemMatchesPotionEffect(this.bot, item, effect.name)
       );
     }
 
@@ -187,7 +193,7 @@ export class AutoBuff {
     const effectItems = this.findEffectApplyingItems("all", splash)[effect.toLowerCase()];
     return (
       effectItems?.filter((item) =>
-        (item.nbt?.value as any).Potion.value.includes(effectConversions[effect.toLowerCase()])
+        itemMatchesPotionEffect(this.bot, item, effect)
       ) ?? []
     );
   }
@@ -232,9 +238,8 @@ export class AutoBuff {
       this.isDrinking = true;
       this._packetDrinking = true;
       await this.bot.util.inv.customEquip(items[0], hand);
-      if (items[0].name.includes("splash")) {
-        await this.bot.lookAt(this.bot.entity.position, true);
-        await sleep(50);
+      if (this.isThrowablePotion(items[0])) {
+        await this.bot.util.move.lookAtSync(this.bot.entity.position, true);
         this.bot.activateItem(this.useOffHand);
         this._packetDrinking = false;
       } else {
@@ -288,9 +293,8 @@ export class AutoBuff {
       this.isDrinking = true;
       this._packetDrinking = true;
       await this.bot.util.inv.customEquip(item, hand);
-      if (item.name.includes("splash")) {
-        await this.bot.lookAt(this.bot.entity.position, true);
-        await sleep(50);
+      if (this.isThrowablePotion(item)) {
+        await this.bot.util.move.lookAtSync(this.bot.entity.position, true);
         this.bot.activateItem(this.useOffHand);
         this._packetDrinking = false;
       } else {
@@ -356,9 +360,8 @@ export class AutoBuff {
       if (items && items.length !== 0) {
         this._packetDrinking = true;
         await this.bot.util.inv.customEquip(items[0], hand);
-        if (items[0].name.includes("splash")) {
-          await this.bot.lookAt(this.bot.entity.position, true);
-          await sleep(50);
+        if (this.isThrowablePotion(items[0])) {
+          await this.bot.util.move.lookAtSync(this.bot.entity.position, true);
           this.bot.activateItem(this.useOffHand);
           this._packetDrinking = false;
         } else {

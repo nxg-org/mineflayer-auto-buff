@@ -23,3 +23,4 @@ export default function plugin(bot: Bot) {
 
 export { AutoBuff } from "./AutoBuff"
 export { Result as Results } from "./AutoBuffTypes"
+export { getEffectKeyForPotionKey, getPotionKeyForEffect, getStandardizedPotionData, itemMatchesPotionEffect } from "./potionUtils"
